@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self' https://www.gstatic.com https://*.firebaseio.com https://*.firebasedatabase.app https://firebase.googleapis.com;
+                 script-src 'self' 'unsafe-inline' https://www.gstatic.com https://*.firebaseio.com;
+                 style-src 'self' 'unsafe-inline';">
+  <title>M4R Console</title>
+  <style>
+    :root{
+      --bg:#000;
+      --fg:#00ff00;
+      --accent:#00ff00;
+      --bar:#111;
+      --font:'Fira Code','Courier New',monospace;
+    }
+    *{box-sizing:border-box;font-family:var(--font);}
+    body{margin:0;height:100vh;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;}
+    .status-bar{
+      background:var(--bar);
+      padding:4px 8px;
+      font-size:12px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    #screen{
+      flex:1;
+      padding:8px;
+      overflow-y:auto;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+    #input-line{
+      display:flex;
+      border-top:1px solid var(--accent);
+    }
+    #prompt{padding:6px 8px;}
+    #cmd{
+      flex:1;
+      background:transparent;
+      border:none;
+      outline:none;
+      color:var(--fg);
+      caret-color:var(--accent);
+    }
+    .cmd-line{opacity:0;animation:fadeIn .3s forwards;}
+    @keyframes fadeIn{to{opacity:1;}}
+    .loading{opacity:.6;}
+  </style>
+</head>
+<body>
+  <div class="status-bar">
+    <span id="status-left">M4R Console</span>
+    <span id="status-right"><span id="jam"></span> <span id="sinyal"></span></span>
+  </div>
+  <div id="screen">Ketik <b>help</b> untuk bantuan.</div>
+  <div id="input-line">
+    <span id="prompt">$ </span>
+    <input id="cmd" autocomplete="off" spellcheck="false"/>
+  </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
