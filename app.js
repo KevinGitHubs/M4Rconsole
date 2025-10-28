@@ -1,36 +1,28 @@
 /********************************************************************
- *  CONFIG & STATE
+ *  FIREBASE CONFIG (TANAM DI SINI)
  *******************************************************************/
 const firebaseConfig = {
-    apiKey: "AIzaSyAsyka0zXAUyCS9kfnnx4t5M5kQDt9iDgc",
-    authDomain: "m4rdb-55f9c.firebaseapp.com",
-    projectId: "m4rdb-55f9c",
-    storageBucket: "m4rdb-55f9c.firebasestorage.app",
-    messagingSenderId: "421535711503",
-    appId: "1:421535711503:web:cdc04adb92b945d059be7a",
-    measurementId: "G-QDPNVX70R7"
+  apiKey: "AIzaSyAsyka0zXAUyCS9kfnnx4t5M5kQDt9iDgc",
+  authDomain: "m4rdb-55f9c.firebaseapp.com",
+  projectId: "m4rdb-55f9c",
+  storageBucket: "m4rdb-55f9c.firebasestorage.app",
+  messagingSenderId: "421535711503",
+  appId: "1:421535711503:web:cdc04adb92b945d059be7a",
+  measurementId: "G-QDPNVX70R7"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+/********************************************************************
+ *  CONST & STATE
+ *******************************************************************/
 const OWNER_ID   = '000000001';
 const OWNER_NAME = 'Aji';
 
 let state = {
-  users:{},          // id:{name,rank,banned,mute,joinDate}
-  groups:{},
-  mall:[],
-  storeCatalog:{},
-  maintenance:false,
-  autoDel:{},        // idUser:menit
-  msgTimer:{},
-  nextId:1,
-  nextItemId:1,
-  nextGroupId:100000,
-  mode:'normal',     // normal | chat | global | pchat | group
-  chatTarget:null,
-  userId:null,
-  userName:null
+  users:{},groups:{},mall:[],storeCatalog:{},maintenance:false,
+  autoDel:{},msgTimer:{},nextId:1,nextItemId:1,nextGroupId:100000,
+  mode:'normal',chatTarget:null,userId:null,userName:null
 };
 
 /********************************************************************
@@ -45,7 +37,7 @@ const jamEl    = $('#jam');
 const sinyalEl = $('#sinyal');
 
 /********************************************************************
- *  UTILS
+ *  UI UTILS
  *******************************************************************/
 function print(txt,cls=''){
   const div = document.createElement('div');
@@ -58,33 +50,31 @@ function print(txt,cls=''){
 function clearInput(){ input.value=''; }
 function setMode(m,t=null){
   state.mode = m; state.chatTarget = t;
-  updateStatusBar();
-  updatePrompt();
+  updateStatusBar(); updatePrompt();
 }
 function updateStatusBar(){
   let title = 'M4R Console';
-  if(m==='global') title = 'GlobalChat';
-  else if(m==='pchat') title = `Chat → ${state.chatTarget}`;
-  else if(m==='group') title = `Grup G${state.chatTarget}`;
+  if(state.mode==='global') title = 'GlobalChat';
+  else if(state.mode==='pchat') title = `Chat → ${state.chatTarget}`;
+  else if(state.mode==='group') title = `Grup G${state.chatTarget}`;
   statusL.textContent = title;
 }
 function updatePrompt(){
   if(!state.userId){ promptEl.textContent='$ '; return; }
   const u = state.users[state.userId];
-  const b = (u.rank==='owner'?'🅒':u.rank==='admin'?'👑':u.rank==='verified'?'✔':u.rank==='store'?'💸':'');
+  const b = badge(state.userId);
   if(state.mode==='normal') promptEl.textContent=`(${state.userId}) ${b} ("${u.name}") $ `;
   else if(state.mode==='global') promptEl.textContent=`(${state.userId}) ${b} ("${u.name}") GLOBAL # `;
-  else if(state.mode==='pchat') promptEl.textContent=`(${state.userId}) ${b} ("${u.name}") → (${state.chatTarget}) # `;
+  else if(state.mode==='pchat') promptEl.textContent=`(${state.userId}) ${b} ("${u.name}") → (${state.chatTarget}) ${b} ("${state.users[state.chatTarget]?.name||'?'}}") # `;
   else if(state.mode==='group') promptEl.textContent=`(${state.userId}) ${b} ("${u.name}") → G${state.chatTarget} # `;
 }
 
 /********************************************************************
- *  DEVICE STATUS (JAM & JARINGAN)
+ *  DEVICE STATUS
  *******************************************************************/
 function updateDeviceStatus(){
   const now = new Date();
   jamEl.textContent = now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
-  // jaringan: ambil type connection API bila ada
   const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
   let s = '4G';
   if(conn){
@@ -99,11 +89,18 @@ setInterval(updateDeviceStatus,1000);
 updateDeviceStatus();
 
 /********************************************************************
- *  LOADING SIMULASI
+ *  PROGRESS BAR PALSU (2-9 detik random)
  *******************************************************************/
-function loading(ms=400){
-  const div = print('Loading...','loading');
-  return new Promise(r=>setTimeout(()=>{div.remove();r();},ms));
+function loading(){
+  const bar = document.createElement('div');
+  bar.className='progress-bar';
+  bar.innerHTML='<div></div>';
+  screen.appendChild(bar);
+  screen.scrollTop = screen.scrollHeight;
+  const sec = 2+Math.floor(Math.random()*8); // 2-9 detik
+  return new Promise(res=>{
+    setTimeout(()=>{bar.remove();res();},sec*1000);
+  });
 }
 
 /********************************************************************
@@ -120,12 +117,18 @@ input.addEventListener('keydown',async e=>{
   if(state.users[state.userId]?.banned){ print('You are banned.'); return; }
   if(state.users[state.userId]?.mute>Date.now()){ print('You are muted.'); return; }
 
-  await loading(); // animasi loading tiap command
+  await loading(); // animasi progress
 
-  // ---------- OWNER ----------
+  // ---------- OWNER ONLY ----------
   if(raw.startsWith('/maintenance')) return cmdMaintenance(raw);
   if(raw.startsWith('/unmaintenance')) return cmdUnmaintenance();
   if(raw.startsWith('/rank')) return cmdRank(raw);
+  if(raw.startsWith('/ban')) return cmdBan(raw);
+  if(raw.startsWith('/unban')) return cmdUnban(raw);
+  if(raw.startsWith('/mute')) return cmdMute(raw);
+  if(raw.startsWith('/unmute')) return cmdUnmute(raw);
+  if(raw.startsWith('/kick')) return cmdKick(raw);
+  if(raw.startsWith('/broadcast')) return cmdBroadcast(raw);
   if(raw==='/store') return cmdAdminStore();
   if(raw==='/shopedit') return cmdShopEdit();
   // ---------- USER ----------
@@ -153,37 +156,35 @@ input.addEventListener('keydown',async e=>{
  *  BASIC COMMANDS
  *******************************************************************/
 function cmdHelp(){
-  print(`Commands:
-/help              – bantuan
-/+nama             – buat akun
-/GlobalChat        – masuk global chat
-/+G#namaGrup       – buat grup
-/#idGrup           – join grup
-/+Store/           – jadi seller
-/store/            – kelola toko
-/store/id          – lihat toko orang
-/profile           – profil
-/editprofile       – edit profil
-/setting           – auto-hapus pesan
-/buy idItem        – beli barang
-/exit              – keluar mode
-Owner:
-/maintenance alasan
-/unmaintenance
-/rank id {verified,admin}
-/store             – admin toko
-/shopedit          – admin mall`);
+  const isOwner = state.userId===OWNER_ID;
+  let txt='Commands:\n';
+  txt+='help, /+nama, /GlobalChat, /+G#namaGrup, /+#idGrup, /+Store/, /store/, /store/id, /profile, /editprofile, /setting, /buy idItem, /exit';
+  if(isOwner){
+    txt+='\nOwner:\n/maintenance alasan, /unmaintenance, /rank id {verified,admin}, /ban id menit, /unban id, /mute id menit, /unmute id, /kick id, /broadcast pesan, /store, /shopedit';
+  }
+  print(txt,'sys');
 }
 function cmdRegister(raw){
   const m=raw.match(/^\/\+(\S+)$/);
   if(!m){print('Usage: /+nama'); return;}
   const nama=m[1];
   if(state.userId){print('Logout first.'); return;}
-  const id=String(Math.floor(1000000000+Math.random()*9000000000));
-  addUser(id,nama);
-  state.userId=id; state.userName=nama;
-  print(`Akun dibuat: ID=${id} Nama=${nama}`);
-  setMode('normal');
+  // cek duplikat nama & id
+  db.collection('users').where('name','==',nama).get().then(snap=>{
+    if(!snap.empty){ print('Nama sudah dipakai.'); return; }
+    const id = nama.toLowerCase()==='aji' ? OWNER_ID : String(Math.floor(1000000000+Math.random()*9000000000));
+    db.collection('users').doc(id).set({
+      name:nama,
+      rank: id===OWNER_ID ? 'owner' : 'verified',
+      joinDate: firebase.firestore.FieldValue.serverTimestamp(),
+      banned:false,
+      mute:0
+    }).then(()=>{
+      state.userId=id; state.userName=nama;
+      print(`Akun dibuat: ID=${id} Nama=${nama}`);
+      setMode('normal');
+    });
+  });
 }
 function cmdGlobalChat(){
   if(state.mode==='global'){setMode('normal'); return;}
@@ -194,33 +195,46 @@ function cmdCreateGroup(raw){
   if(!m){print('Usage: /+G#namaGrup'); return;}
   const nama=m[1];
   const id=String(state.nextGroupId++);
-  state.groups[id]={name:nama,members:[state.userId]};
-  print(`Grup dibuat: G${id} "${nama}"`);
+  db.collection('groups').doc(id).set({
+    name:nama,
+    members:[state.userId]
+  }).then(()=>{
+    state.groups[id]={name:nama,members:[state.userId]};
+    print(`Grup dibuat: G${id} "${nama}"`);
+  });
 }
 function cmdJoinGroup(raw){
   const m=raw.match(/^\/\+#(\d+)$/);
   if(!m){print('Usage: /+#idGrup'); return;}
   const id=m[1];
-  if(!state.groups[id]){print('Grup tidak ada.'); return;}
-  if(!state.groups[id].members.includes(state.userId))
-    state.groups[id].members.push(state.userId);
-  setMode('group',id);
+  db.collection('groups').doc(id).get().then(doc=>{
+    if(!doc.exists){ print('Grup tidak ada.'); return; }
+    const data=doc.data();
+    if(!data.members.includes(state.userId)){
+      data.members.push(state.userId);
+      db.collection('groups').doc(id).update({members:data.members});
+    }
+    state.groups[id]=data;
+    setMode('group',id);
+  });
 }
 function cmdBeSeller(){
   const u=state.users[state.userId];
   if(!u){print('Buat akun dulu.'); return;}
   if(u.rank==='store'){print('Sudah seller.'); return;}
-  u.rank='store';
-  if(!state.storeCatalog[state.userId]) state.storeCatalog[state.userId]=[];
-  print('Anda sekarang seller! Rank 💸 aktif.');
-  updatePrompt();
+  db.collection('users').doc(state.userId).update({rank:'store'}).then(()=>{
+    u.rank='store';
+    if(!state.storeCatalog[state.userId]) state.storeCatalog[state.userId]=[];
+    print('Anda sekarang seller! Rank 💸 aktif.');
+    updatePrompt();
+  });
 }
 function cmdMyStore(){
   if(state.users[state.userId]?.rank!=='store'){
     print('Anda belum seller. /+Store/'); return;
   }
-  let txt='Dashboard Toko Anda\n';
   const list=state.storeCatalog[state.userId]||[];
+  let txt='Dashboard Toko Anda\n';
   if(list.length===0) txt+='(kosong)';
   else list.forEach(it=>txt+=`ID:${it.id}  ${it.nama}  ${it.harga}  ${it.tipe}\n`);
   print(txt);
@@ -229,51 +243,37 @@ function cmdViewStore(raw){
   const m=raw.match(/^\/store\/(\d+)$/);
   if(!m){print('Usage: /store/idUser'); return;}
   const uid=m[1];
-  const u=state.users[uid];
-  if(!u){print('User tidak ada.'); return;}
-  const list=state.storeCatalog[uid]||[];
-  let txt=`Toko (${uid}) "${u.name}"\n`;
-  if(list.length===0) txt+='(toko kosong)';
-  else list.forEach(it=>txt+=`ID:${it.id}  ${it.nama}  ${it.harga}  ${it.tipe}\n`);
-  print(txt);
+  db.collection('users').doc(uid).get().then(doc=>{
+    if(!doc.exists){ print('User tidak ada.'); return; }
+    const u=doc.data();
+    const list=state.storeCatalog[uid]||[];
+    let txt=`Toko (${uid}) "${u.name}"\n`;
+    if(list.length===0) txt+='(toko kosong)';
+    else list.forEach(it=>txt+=`ID:${it.id}  ${it.nama}  ${it.harga}  ${it.tipe}\n`);
+    print(txt);
+  });
 }
 function cmdProfile(){
   const u=state.users[state.userId];
   if(!u){print('Buat akun dulu.'); return;}
-  print(`Profil\nID : ${state.userId}\nNama : ${u.name}\nRank : ${u.rank}\nJoin : ${u.joinDate.toLocaleString()}`);
+  print(`Profil\nID : ${state.userId}\nNama : ${u.name}\nRank : ${u.rank} ${badge(state.userId)}\nJoin : ${u.joinDate.toDate().toLocaleString()}`);
 }
 function cmdEditProfile(){
   const u=state.users[state.userId];
   if(!u){print('Buat akun dulu.'); return;}
   const n=prompt('Nama baru:',u.name);
   if(!n){print('Dibatalkan.'); return;}
-  u.name=n; state.userName=n;
-  print('Profil diperbarui.');
-  updatePrompt();
+  db.collection('users').doc(state.userId).update({name:n}).then(()=>{
+    u.name=n; state.userName=n;
+    print('Profil diperbarui.');
+    updatePrompt();
+  });
 }
 function cmdSetting(){
   const m=prompt('Auto-hapus pesan (menit, 0=off):',state.autoDel[state.userId]||0);
   if(m===null){print('Dibatalkan.'); return;}
   state.autoDel[state.userId]=parseInt(m)||0;
   print(`Auto-delete di-set ${m||'off'}.`);
-}
-function cmdBuy(raw){
-  const m=raw.match(/^\/buy\s+(\d+)$/);
-  if(!m){print('Usage: /buy idItem'); return;}
-  const idIt=m[1];
-  let it=state.mall.find(x=>x.id===idIt);
-  let src='mall';
-  if(!it){
-    for(const uid in state.storeCatalog){
-      const f=state.storeCatalog[uid].find(x=>x.id===idIt);
-      if(f){it=f; src=uid; break;}
-    }
-  }
-  if(!it){print('Item tidak ditemukan.'); return;}
-  print(`[BUY-REQ] Anda ingin membeli "${it.nama}" seharga ${it.harga}. (Owner akan proses)`);
-  // notif ke owner
-  if(state.users[OWNER_ID])
-    print(`[BUY-REQ] User (${state.userId})("${state.userName}") ingin membeli "${it.nama}" seharga ${it.harga}.`);
 }
 function cmdExit(){
   if(state.mode!=='normal') setMode('normal');
@@ -284,19 +284,21 @@ function cmdExit(){
  *******************************************************************/
 function sendGlobal(txt){
   const del=state.autoDel[state.userId]||0;
-  const el=print(`[GLOBAL] (${state.userId})${badge(state.userId)} ("${state.userName}"): ${txt}`);
+  const el=print(`[GLOBAL] (${state.userId})${badge(state.userId)} ("${state.userName}"): ${txt}`,'self');
   if(del) scheduleExpire(el,del);
+  // simpan ke firestore (broadcast ke listener lain)
+  db.collection('globalChat').add({from:state.userId,txt,timestamp:firebase.firestore.FieldValue.serverTimestamp()});
 }
 function sendPchat(txt){
   if(!state.chatTarget){ print('No target.'); return; }
   const del=state.autoDel[state.userId]||0;
-  const el=print(`[CHAT] (${state.userId})${badge(state.userId)} ("${state.userName}") → (${state.chatTarget})${badge(state.chatTarget)} ("${state.users[state.chatTarget]?.name||'?'}}"): ${txt}`);
+  const el=print(`[CHAT] (${state.userId})${badge(state.userId)} ("${state.userName}") → (${state.chatTarget})${badge(state.chatTarget)} ("${state.users[state.chatTarget]?.name||'?'}}"): ${txt}`,'self');
   if(del) scheduleExpire(el,del);
 }
 function sendGroup(txt){
   if(!state.chatTarget){ print('No group.'); return; }
   const del=state.autoDel[state.userId]||0;
-  const el=print(`[GRUP G${state.chatTarget}] (${state.userId})${badge(state.userId)} ("${state.userName}"): ${txt}`);
+  const el=print(`[GRUP G${state.chatTarget}] (${state.userId})${badge(state.userId)} ("${state.userName}"): ${txt}`,'self');
   if(del) scheduleExpire(el,del);
 }
 function scheduleExpire(el,menit){
@@ -319,20 +321,95 @@ function badge(id){
 function cmdMaintenance(raw){
   const reason=raw.slice(13).trim()||'Maintenance';
   state.maintenance=true;
-  print(`🔒 Maintenance aktif: ${reason}`);
+  print(`🔒 Maintenance aktif: ${reason}`,'sys');
   setMode('normal');
 }
 function cmdUnmaintenance(){
   state.maintenance=false;
-  print('🔓 Maintenance selesai. Server online.');
+  print('🔓 Maintenance selesai. Server online.','sys');
 }
 function cmdRank(raw){
   const m=raw.match(/^\/rank\s+(\d+)\s+(verified|admin)$/);
   if(!m){print('Usage: /rank id {verified|admin}'); return;}
   const [_,uid,rk]=m;
   if(!state.users[uid]){print('User tidak ada.'); return;}
-  state.users[uid].rank=rk;
-  print(`Rank (${uid})("${state.users[uid].name}") → ${rk} ${badge(uid)}`);
+  db.collection('users').doc(uid).update({rank:rk}).then(()=>{
+    state.users[uid].rank=rk;
+    print(`Rank (${uid})("${state.users[uid].name}") → ${rk} ${badge(uid)}`,'sys');
+  });
+}
+function cmdBan(raw){
+  const m=raw.match(/^\/ban\s+(\d+)(?:\s+(\d+))?$/);
+  if(!m){print('Usage: /ban id [menit] (0=perma)'); return;}
+  const [_,uid,min=0]=m;
+  if(!state.users[uid]){print('User tidak ada.'); return;}
+  const until=min?Date.now()+min*60000:0;
+  db.collection('users').doc(uid).update({banned:true,banUntil:until}).then(()=>{
+    state.users[uid].banned=true;
+    print(`User (${uid})("${state.users[uid].name}") diban ${min||'perma'}.`,'sys');
+  });
+}
+function cmdUnban(raw){
+  const m=raw.match(/^\/unban\s+(\d+)$/);
+  if(!m){print('Usage: /unban id'); return;}
+  const uid=m[1];
+  if(!state.users[uid]){print('User tidak ada.'); return;}
+  db.collection('users').doc(uid).update({banned:false}).then(()=>{
+    state.users[uid].banned=false;
+    print(`User (${uid})("${state.users[uid].name}") di-unban.`,'sys');
+  });
+}
+function cmdMute(raw){
+  const m=raw.match(/^\/mute\s+(\d+)\s+(\d+)$/);
+  if(!m){print('Usage: /mute id menit'); return;}
+  const [_,uid,min]=m;
+  if(!state.users[uid]){print('User tidak ada.'); return;}
+  const until=Date.now()+min*60000;
+  db.collection('users').doc(uid).update({mute:until}).then(()=>{
+    state.users[uid].mute=until;
+    print(`User (${uid})("${state.users[uid].name}") dimute ${min} menit.`,'sys');
+  });
+}
+function cmdUnmute(raw){
+  const m=raw.match(/^\/unmute\s+(\d+)$/);
+  if(!m){print('Usage: /unmute id'); return;}
+  const uid=m[1];
+  if(!state.users[uid]){print('User tidak ada.'); return;}
+  db.collection('users').doc(uid).update({mute:0}).then(()=>{
+    state.users[uid].mute=0;
+    print(`User (${uid})("${state.users[uid].name}") di-unmute.`,'sys');
+  });
+}
+function cmdKick(raw){
+  const m=raw.match(/^\/kick\s+(\d+)$/);
+  if(!m){print('Usage: /kick id'); return;}
+  const uid=m[1];
+  if(!state.users[uid]){print('User tidak ada.'); return;}
+  // keluarkan dari semua grup & global
+  if(state.mode==='global' && state.userId===uid) setMode('normal');
+  for(const gid in state.groups){
+    state.groups[gid].members=state.groups[gid].members.filter(x=>x!==uid);
+  }
+  print(`User (${uid})("${state.users[uid].name}") dikick.`,'sys');
+}
+function cmdBroadcast(raw){
+  const txt=raw.slice(11).trim()||'Broadcast';
+  print(`[BROADCAST] ${txt}`,'sys');
+}
+function cmdAdminStore(){
+  let txt='Admin Panel – Semua Toko\n';
+  for(const uid in state.storeCatalog){
+    const u=state.users[uid];
+    const list=state.storeCatalog[uid];
+    txt+=`\nToko (${uid}) "${u?u.name:'?'}"\n`;
+    list.forEach(it=>txt+=`ID:${it.id}  ${it.nama}  ${it.harga}  ${it.tipe}\n`);
+  }
+  print(txt,'sys');
+}
+function cmdShopEdit(){
+  let txt='Mall Admin – Kelola Barang\n';
+  state.mall.forEach(it=>txt+=`ID:${it.id}  ${it.nama}  ${it.harga}  Stok:${it.stok}\n`);
+  print(txt,'sys');
 }
 
 /********************************************************************
@@ -345,7 +422,22 @@ function addUser(id,name,rank='verified'){
 }
 
 /********************************************************************
+ *  LISTENER GLOBAL CHAT (REALTIME)
+ *******************************************************************/
+db.collection('globalChat').orderBy('timestamp','desc').limit(50).onSnapshot(snap=>{
+  snap.docChanges().reverse().forEach(chg=>{
+    if(chg.type==='added'){
+      const msg=chg.doc.data();
+      if(msg.from===state.userId) return; // skip diri sendiri
+      const el=print(`[GLOBAL] (${msg.from})${badge(msg.from)} ("${state.users[msg.from]?.name||'?'}"): ${msg.txt}`,'other');
+      const del=state.autoDel[msg.from]||0;
+      if(del) scheduleExpire(el,del);
+    }
+  });
+});
+
+/********************************************************************
  *  INIT
  *******************************************************************/
-print('Ketik help untuk bantuan.');
+print('Ketik help untuk bantuan.','sys');
 updatePrompt();
