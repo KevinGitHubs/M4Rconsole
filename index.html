@@ -15,40 +15,34 @@
       --accent:#00ff00;
       --bar:#111;
       --font:'Fira Code','Courier New',monospace;
+      --gray:#888;
+      --white:#fff;
     }
     *{box-sizing:border-box;font-family:var(--font);}
     body{margin:0;height:100vh;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;}
-    .status-bar{
-      background:var(--bar);
-      padding:4px 8px;
-      font-size:12px;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-    }
-    #screen{
-      flex:1;
-      padding:8px;
-      overflow-y:auto;
-      white-space:pre-wrap;
-      word-break:break-word;
-    }
-    #input-line{
-      display:flex;
-      border-top:1px solid var(--accent);
-    }
+    .status-bar{background:var(--bar);padding:4px 8px;font-size:12px;display:flex;justify-content:space-between;align-items:center;}
+    #screen{flex:1;padding:8px;overflow-y:auto;white-space:pre-wrap;word-break:break-word;}
+    #input-line{display:flex;border-top:1px solid var(--accent);}
     #prompt{padding:6px 8px;}
-    #cmd{
-      flex:1;
-      background:transparent;
-      border:none;
-      outline:none;
-      color:var(--fg);
-      caret-color:var(--accent);
-    }
+    #cmd{flex:1;background:transparent;border:none;outline:none;color:var(--fg);caret-color:var(--accent);}
     .cmd-line{opacity:0;animation:fadeIn .3s forwards;}
     @keyframes fadeIn{to{opacity:1;}}
     .loading{opacity:.6;}
+    .self{color:var(--accent);}
+    .other{color:var(--white);}
+    .sys{color:var(--gray);}
+    .expired{color:var(--gray);font-style:italic;}
+    .progress-bar{
+      height:4px;background:var(--gray);
+      margin:4px 0;border-radius:2px;overflow:hidden;
+    }
+    .progress-bar div{
+      height:100%;background:var(--accent);
+      width:0%;animation:progressAnim 2s linear infinite;
+    }
+    @keyframes progressAnim{
+      0%{width:0%}100%{width:100%}
+    }
   </style>
 </head>
 <body>
@@ -56,7 +50,7 @@
     <span id="status-left">M4R Console</span>
     <span id="status-right"><span id="jam"></span> <span id="sinyal"></span></span>
   </div>
-  <div id="screen">Ketik <b>help</b> untuk bantuan.</div>
+  <div id="screen"></div>
   <div id="input-line">
     <span id="prompt">$ </span>
     <input id="cmd" autocomplete="off" spellcheck="false"/>
